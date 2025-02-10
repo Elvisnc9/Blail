@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:highlight_text/highlight_text.dart';
+import 'dart:io' show Platform;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -17,7 +19,9 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   late stt.SpeechToText _speech;
   bool _isListening = false;
+  bool _isInitializing = false;
   String _text = "Say your catch phrase...";
+  // ignore: unused_field
   double _confidence = 1.0;
 
   final Map<String, HighlightedWord> _highlights = {
@@ -41,43 +45,70 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
-    _requestPermissions();
+    _requestPermissions().then((_) {
+      _initializeSpeech();
+    });
+    _checkPlatformSupport();
   }
 
   Future<void> _requestPermissions() async {
     await Permission.microphone.request();
   }
 
-void _startListening() async {
-  var status = await Permission.microphone.request();
-  if (status.isGranted) {
+  Future<void> _initializeSpeech() async {
+    setState(() => _isInitializing = true);
     bool available = await _speech.initialize(
       onStatus: (status) => print("Status: $status"),
       onError: (errorNotification) => print("Error: $errorNotification"),
     );
-    if (available) {
-      setState(() => _isListening = true);
-      _speech.listen(onResult: (result) {
-        setState(() {
-          _text = result.recognizedWords;
-          if (result.hasConfidenceRating && result.confidence > 0) {
-            _confidence = result.confidence;
-          }
-        });
-      });
-    } else {
+    setState(() => _isInitializing = false);
+    if (!available) {
       print("Speech recognition not available");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Speech recognition not available on this device")),
+        const SnackBar(content: Text("Speech recognition not available on this device")),
       );
     }
-  } else {
-    print("Microphone permission denied");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Microphone permission denied")),
-    );
   }
-}
+
+  void _checkPlatformSupport() {
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Speech recognition is not supported on desktop platforms")),
+      );
+    }
+  }
+
+  void _startListening() async {
+    var status = await Permission.microphone.request();
+    if (status.isGranted) {
+      bool available = await _speech.initialize(
+        onStatus: (status) => print("Status: $status"),
+        onError: (errorNotification) => print("Error: $errorNotification"),
+      );
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(onResult: (result) {
+          setState(() {
+            _text = result.recognizedWords;
+            if (result.hasConfidenceRating && result.confidence > 0) {
+              _confidence = result.confidence;
+            }
+          });
+        });
+      } else {
+        print("Speech recognition not available");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Speech recognition not available on this device")),
+        );
+      }
+    } else {
+      print("Microphone permission denied");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Microphone permission denied")),
+      );
+    }
+  }
+
   void _stopListening() {
     setState(() => _isListening = false);
     _speech.stop();
@@ -166,7 +197,7 @@ void _startListening() async {
                 width: double.infinity,
                 height: 30.h,
                 child: Image.asset(
-                  _isListening ? 'assets/images/voice_tracker.gif' : 'assets/images/voice-tracker.png',
+                  _isListening ? 'assets/images/voice tracker.gif' : 'assets/images/voice-tracker.png',
                   fit: BoxFit.fill,
                   width: 500,
                 ),
@@ -176,23 +207,23 @@ void _startListening() async {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: AvatarGlow(
-      
-        animate: _isListening,
-        glowColor: const Color(0xFF7F7F7F),
-       
-        duration: const Duration(milliseconds: 2000),
-        repeat: true,
-        child: FloatingActionButton(
-          splashColor: const Color(0xFF7F7F7F),
-          backgroundColor: const Color(0xFF7F7F7F),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30.0),
-          ),
-          onPressed: _isListening ? _stopListening : _startListening,
-          child: Icon(_isListening ? Icons.mic : Icons.mic_off, color: Colors.black),
-        ),
-      ),
+      floatingActionButton: _isInitializing
+          ? const CircularProgressIndicator()
+          : AvatarGlow(
+              animate: _isListening,
+              glowColor: const Color(0xFF7F7F7F),
+              duration: const Duration(milliseconds: 2000),
+              repeat: true,
+              child: FloatingActionButton(
+                splashColor: const Color(0xFF7F7F7F),
+                backgroundColor: const Color(0xFF7F7F7F),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),
+                onPressed: _isListening ? _stopListening : _startListening,
+                child: Icon(_isListening ? Icons.mic : Icons.mic_off, color: Colors.black),
+              ),
+            ),
     );
   }
 }
