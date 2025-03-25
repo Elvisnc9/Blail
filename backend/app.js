@@ -6,7 +6,7 @@ import { Sequelize } from "sequelize";
 
 
 const port = 4040;
-// Set up Sequelize connection to MySQL
+// Se
 
 
 const sequelize = new Sequelize(

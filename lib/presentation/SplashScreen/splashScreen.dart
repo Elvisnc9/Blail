@@ -1,5 +1,6 @@
 import 'package:animated_splash_screen/animated_splash_screen.dart';
-import 'package:bail/presentation/Sign_Up/Sign_up.dart';
+import 'package:bail/presentation/Auth_screen/Login.dart';
+import 'package:bail/presentation/Auth_screen/signup.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:the_responsive_builder/the_responsive_builder.dart';
@@ -22,11 +23,12 @@ class _SplashscreenState extends State<Splashscreen> {
         
        nextScreen: const SignUpScreen(),
     backgroundColor: Colors.black,
-    duration: 6000,
+    duration: 2000,
     splashIconSize: 20.h,
     animationDuration: const Duration(milliseconds: 1500),
-    splashTransition: SplashTransition.fadeTransition,
-    pageTransitionType: PageTransitionType.leftToRight,
+    splashTransition: SplashTransition.scaleTransition,
+    pageTransitionType: PageTransitionType.bottomToTop,
+    
     
     
     
